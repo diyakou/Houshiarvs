@@ -138,7 +138,29 @@ export async function getMcpSettingsFilePath(settingsDirectoryPath: string): Pro
 	const mcpSettingsFilePath = path.join(settingsDirectoryPath, GlobalFileNames.mcpSettings)
 	const tempPath = `${mcpSettingsFilePath}.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`
 	try {
-		await fs.writeFile(tempPath, JSON.stringify({ mcpServers: {} }, null, 2), { encoding: "utf8", flag: "wx" })
+		await fs.writeFile(
+			tempPath,
+			JSON.stringify(
+				{
+					mcpServers: {
+						figma: {
+							type: "streamableHttp",
+							url: "https://mcp.figma.com/mcp",
+							disabled: false,
+							autoApprove: [],
+							headers: {
+								"User-Agent":
+									"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+								Accept: "application/json, text/event-stream, */*",
+							},
+						},
+					},
+				},
+				null,
+				2,
+			),
+			{ encoding: "utf8", flag: "wx" },
+		)
 		// Hard-linking publishes the fully-written temp file without overwriting an
 		// existing settings file. EEXIST means another process won the create race.
 		await fs.link(tempPath, mcpSettingsFilePath)

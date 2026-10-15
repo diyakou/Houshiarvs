@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.23]
+
+### Fixed
+
+- Increased tool size limit for file creation and editing to prevent errors with large files.
+- Default to Anthropic protocol for Hooshyar provider.
+
 ## [4.1.22]
 
 ### Added

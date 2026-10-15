@@ -595,6 +595,8 @@ export class McpHub {
 					// Use ReconnectingEventSource for auto-reconnection on connection drops
 					global.EventSource = ReconnectingEventSource
 
+					const isFigma = name.toLowerCase().includes("figma") || expandedConfig.url.includes("figma.com")
+
 					// Custom fetch wrapper that treats 404 as 405 for GET requests.
 					// The MCP SDK sends a GET request to check for SSE stream support.
 					// Per MCP spec, servers should return 405 if they don't support SSE,
@@ -602,7 +604,19 @@ export class McpHub {
 					// gracefully, so we normalize 404 -> 405 to fix compatibility.
 					// See: https://github.com/modelcontextprotocol/typescript-sdk/issues/1150
 					const streamableHttpFetch = (async (url, init) => {
-						const response = await fetch(url, init)
+						const reqHeaders = new Headers(init?.headers)
+						if (isFigma) {
+							if (!reqHeaders.has("User-Agent")) {
+								reqHeaders.set(
+									"User-Agent",
+									"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+								)
+							}
+							if (!reqHeaders.has("Accept")) {
+								reqHeaders.set("Accept", "application/json, text/event-stream, */*")
+							}
+						}
+						const response = await fetch(url, { ...init, headers: reqHeaders })
 						if (init?.method === "GET" && response.status === 404) {
 							return new Response(response.body, {
 								status: 405,
@@ -699,6 +713,32 @@ export class McpHub {
 					await this.notifyWebviewOfServerChanges()
 					return // Don't throw, just mark as needs auth
 				}
+
+				const isFigmaServer = name.toLowerCase().includes("figma") || (config as any).url?.includes("figma.com")
+				const errStr = error instanceof Error ? error.message : String(error)
+				const isForbidden403 = errStr.includes("403") || errStr.toLowerCase().includes("forbidden")
+				if (isFigmaServer && isForbidden403) {
+					Logger.error(`Server "${name}" received 403 Forbidden:`, error)
+					const forbiddenConnection: McpConnection = {
+						server: {
+							name,
+							config: JSON.stringify(config),
+							status: "disconnected",
+							disabled: false,
+							oauthRequired: true,
+							oauthAuthStatus: "unauthenticated",
+							error: "خطای ۴۰۳ فیگما: دسترسی ریموت با این آی‌پی مسدود است. لطفاً وی‌پی‌ان یا پروکسی خود را روشن کنید یا از سرور محلی Figma Desktop (http://127.0.0.1:3845/mcp) با باز بودن برنامه فیگما استفاده کنید.",
+						},
+						client,
+						transport,
+						authProvider,
+					}
+					this.connections = this.connections.filter((conn) => conn.server.name !== name)
+					this.connections.push(forbiddenConnection)
+					await this.notifyWebviewOfServerChanges()
+					return
+				}
+
 				await client.close().catch(() => {})
 				// Re-throw other errors with the same actionable timeout detail as
 				// post-initialize requests.
@@ -1858,11 +1898,21 @@ export class McpHub {
 					throw new Error(`An MCP server with the name "${serverName}" already exists`)
 				}
 
-				const serverConfig = {
+				const isFigmaServer = serverName.toLowerCase().includes("figma") || serverUrl.includes("figma.com")
+				const serverConfig: Record<string, any> = {
 					url: serverUrl,
 					type: transportType,
 					disabled: false,
 					autoApprove: [],
+					...(isFigmaServer
+						? {
+								headers: {
+									"User-Agent":
+										"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+									Accept: "application/json, text/event-stream, */*",
+								},
+							}
+						: {}),
 				}
 
 				// Expand environment variables for validation
@@ -2140,6 +2190,7 @@ export class McpHub {
 
 		// Show "pending" in the UI while the user is off in the browser
 		connection.server.oauthAuthStatus = "pending"
+		connection.server.status = "connecting"
 		connection.server.error = ""
 		await this.notifyWebviewOfServerChanges()
 
@@ -2150,6 +2201,7 @@ export class McpHub {
 			const current = this.connections.find((conn) => conn.server.name === serverName)
 			if (current) {
 				current.server.oauthAuthStatus = "unauthenticated"
+				current.server.status = "disconnected"
 				this.appendErrorMessage(current, error instanceof Error ? error.message : String(error))
 			}
 			await this.notifyWebviewOfServerChanges()
@@ -2162,8 +2214,18 @@ export class McpHub {
 		if (authedConnection) {
 			authedConnection.server.oauthAuthStatus = "authenticated"
 			authedConnection.server.oauthRequired = true
+			authedConnection.server.status = "connected"
 			authedConnection.server.error = ""
 		}
+
+		HostProvider.window
+			.showMessage({
+				type: ShowMessageType.INFORMATION,
+				message: `اتصال و احراز هویت سرور ${serverName} با موفقیت انجام شد! ✅ (Authentication successful)`,
+			})
+			.catch(() => {})
+
+		await this.notifyWebviewOfServerChanges()
 
 		// Restart connection so the transport authenticates with the new tokens
 		await this.restartConnection(serverName)

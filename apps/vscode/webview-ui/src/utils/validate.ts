@@ -64,6 +64,7 @@ export function validateApiConfiguration(currentMode: Mode, apiConfiguration?: A
 				}
 				break
 			case "cline":
+			case "hooshyar":
 				break
 			case "openai-codex":
 				// Authentication is handled via OAuth, not API key

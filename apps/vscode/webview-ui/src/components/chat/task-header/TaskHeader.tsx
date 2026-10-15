@@ -56,6 +56,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 		environment,
 		workspaceRoots,
 		platform,
+		useAutoCondense = true,
 	} = useExtensionState()
 
 	const [isHighlightedTextExpanded, setIsHighlightedTextExpanded] = useState(false)
@@ -225,7 +226,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							onSendMessage={onSendMessage}
 							tokensIn={tokensIn}
 							tokensOut={tokensOut}
-							useAutoCondense={false} // Disable auto-condense configuration in UI for now
+							useAutoCondense={useAutoCondense ?? true}
 						/>
 					</div>
 				)}

@@ -475,7 +475,10 @@ ${ctx.cellJson || "{}"}
 	// Register the openWalkthrough command handler
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.Walkthrough, async () => {
-			await vscode.commands.executeCommand("workbench.action.openWalkthrough", `${context.extension.id}#ClineWalkthrough`)
+			await vscode.commands.executeCommand(
+				"workbench.action.openWalkthrough",
+				`${context.extension.id}#HooshyarWalkthrough`,
+			)
 			telemetryService.captureButtonClick("command_openWalkthrough")
 		}),
 	)

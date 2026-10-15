@@ -305,6 +305,11 @@ describe("State Keys Type Safety", () => {
 			}
 		})
 
+		it("should default both modes to the Hooshyar provider", () => {
+			expect(getDefaultValue("planModeApiProvider")).to.equal("hooshyar")
+			expect(getDefaultValue("actModeApiProvider")).to.equal("hooshyar")
+		})
+
 		it("should return undefined for keys without defaults", () => {
 			// Keys with `undefined` as default should return undefined
 			const keysWithUndefinedDefaults = GlobalStateAndSettingKeys.filter((key) => {
@@ -366,14 +371,11 @@ describe("State Keys Type Safety", () => {
 			}
 		})
 
-		it("should fold SDK provider spellings to legacy ApiProvider spellings on load", () => {
-			// State written by older builds (or other hosts) may store the SDK
-			// catalog id `openai-compatible`; the load transform migrates it to
-			// the legacy `openai` spelling the rest of the extension is keyed by.
-			expect(applyTransform("planModeApiProvider", "openai-compatible")).to.equal("openai")
-			expect(applyTransform("actModeApiProvider", "openai-compatible")).to.equal("openai")
-			expect(applyTransform("planModeApiProvider", "anthropic")).to.equal("anthropic")
-			expect(applyTransform("actModeApiProvider", "openai")).to.equal("openai")
+		it("should migrate every stored provider selection to Hooshyar", () => {
+			expect(applyTransform("planModeApiProvider", "openai-compatible")).to.equal("hooshyar")
+			expect(applyTransform("actModeApiProvider", "openrouter")).to.equal("hooshyar")
+			expect(applyTransform("planModeApiProvider", "anthropic")).to.equal("hooshyar")
+			expect(applyTransform("actModeApiProvider", "hooshyar")).to.equal("hooshyar")
 		})
 	})
 

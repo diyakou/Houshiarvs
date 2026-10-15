@@ -95,11 +95,90 @@
  * ```
  */
 
-import { EnvHttpProxyAgent, setGlobalDispatcher, fetch as undiciFetch } from "undici"
+import { Agent, ProxyAgent, setGlobalDispatcher, fetch as undiciFetch } from "undici"
+import { normalizeProxyUrl } from "./proxy"
 
 type FetchFunction = (...args: Parameters<typeof globalThis.fetch>) => ReturnType<typeof globalThis.fetch>
 
 let mockFetch: FetchFunction | undefined
+
+function getEffectiveProxySettings(): { url: string; allowInsecure: boolean } | null {
+	let vsProxy: unknown
+	let hooshyarProxy: unknown
+	let vsStrictSSL: boolean | undefined
+	try {
+		const vscodeModule = typeof require !== "undefined" ? require("vscode") : undefined
+		if (vscodeModule?.workspace?.getConfiguration) {
+			const httpConfig = vscodeModule.workspace.getConfiguration("http")
+			vsProxy = httpConfig.get("proxy")
+			vsStrictSSL = httpConfig.get("proxyStrictSSL") === true
+			const hooshyarConfig = vscodeModule.workspace.getConfiguration("hooshyar")
+			hooshyarProxy = hooshyarConfig?.get("proxy")
+		}
+	} catch {
+		// Ignore
+	}
+
+	const candidates = [
+		vsProxy,
+		hooshyarProxy,
+		process.env.HTTPS_PROXY,
+		process.env.HTTP_PROXY,
+		process.env.ALL_PROXY,
+		process.env.https_proxy,
+		process.env.http_proxy,
+		process.env.all_proxy,
+	]
+	for (const candidate of candidates) {
+		const url = normalizeProxyUrl(candidate)
+		if (url) {
+			return { url, allowInsecure: vsStrictSSL === false }
+		}
+	}
+	return null
+}
+
+export function configureGlobalProxyDispatcher(): void {
+	try {
+		const proxyInfo = getEffectiveProxySettings()
+		if (proxyInfo) {
+			const agent = new ProxyAgent({
+				uri: proxyInfo.url,
+				requestTls: {
+					rejectUnauthorized: !proxyInfo.allowInsecure,
+				},
+			})
+			setGlobalDispatcher(agent)
+		} else {
+			setGlobalDispatcher(new Agent())
+		}
+	} catch (_error) {
+		try {
+			setGlobalDispatcher(new Agent())
+		} catch {
+			// Ignore
+		}
+	}
+}
+
+// Initialize proxy dispatcher at load time
+configureGlobalProxyDispatcher()
+
+// Listen for dynamic proxy configuration changes in VS Code
+try {
+	const vscodeModule = typeof require !== "undefined" ? require("vscode") : undefined
+	vscodeModule?.workspace?.onDidChangeConfiguration?.((e: any) => {
+		if (
+			e.affectsConfiguration?.("http.proxy") ||
+			e.affectsConfiguration?.("http.proxyStrictSSL") ||
+			e.affectsConfiguration?.("hooshyar.proxy")
+		) {
+			configureGlobalProxyDispatcher()
+		}
+	})
+} catch {
+	// Ignore
+}
 
 /**
  * Platform-configured fetch that respects proxy settings.
@@ -112,21 +191,45 @@ let mockFetch: FetchFunction | undefined
  * ```
  */
 export const fetch: typeof globalThis.fetch = (() => {
-	// Note: Don't use Logger here; it may not be initialized.
+	// Use undiciFetch which is tied to the configured undici global dispatcher (ProxyAgent)
+	const baseFetch = undiciFetch as any as typeof globalThis.fetch
 
-	let baseFetch: typeof globalThis.fetch = globalThis.fetch
-	// Note: See esbuild.mjs, process.env.IS_STANDALONE is statically rewritten
-	// to "true" or "false" (as strings) in the JetBrains/CLI build.
-	// We must use explicit string comparison because "false" is truthy in JS.
-	if (process.env.IS_STANDALONE === "true") {
-		// Configure undici with ProxyAgent
-		const agent = new EnvHttpProxyAgent({})
-		setGlobalDispatcher(agent)
-		baseFetch = undiciFetch as any as typeof globalThis.fetch
+	let lastDegradedNoticeTime = 0
+
+	function notifyDegradedSwitchIfNeeded(headers: Headers) {
+		try {
+			const isDegraded = headers.get("X-Degraded-Mode") === "true" || headers.get("X-Claude-Hourly-Degraded") === "true"
+			if (!isDegraded) {
+				return
+			}
+			const now = Date.now()
+			if (now - lastDegradedNoticeTime > 300_000) {
+				lastDegradedNoticeTime = now
+				const reason = headers.get("X-Degraded-Reason")
+				const upstream = headers.get("X-Upstream-Model") || "DeepSeek"
+				const msg =
+					reason === "claude_hourly_limit"
+						? `هشیار: سقف ساعتی کلاد به پایان رسید؛ جهت جلوگیری از توقف کار شما، درخواست جاری به صورت خودکار با مدل اقتصادی ${upstream} پردازش شد.`
+						: `هشیار: جهت بهینه‌سازی مصرف و تداوم کار، پاسخ جاری با ${upstream} پردازش شد.`
+				const vscodeModule = typeof require !== "undefined" ? require("vscode") : undefined
+				vscodeModule?.window?.showInformationMessage(msg)
+			}
+		} catch {
+			// Ignore in test/standalone environments
+		}
 	}
 
-	return ((input: string | URL | Request, init?: RequestInit): Promise<Response> =>
-		(mockFetch || baseFetch)(input, init)) as typeof globalThis.fetch
+	return (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+		const res = await (mockFetch || baseFetch)(input, init)
+		try {
+			if (res && res.headers) {
+				notifyDegradedSwitchIfNeeded(res.headers)
+			}
+		} catch {
+			// No-op
+		}
+		return res
+	}) as typeof globalThis.fetch
 })()
 
 /**

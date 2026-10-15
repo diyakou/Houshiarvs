@@ -1,6 +1,6 @@
 import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import { describe, expect, it } from "vitest"
-import { isToolAutoApproved } from "./sdk-tool-policies"
+import { buildToolPolicies, isToolAutoApproved } from "./sdk-tool-policies"
 
 describe("isToolAutoApproved", () => {
 	it("does not auto-approve command tools by default", () => {
@@ -36,5 +36,17 @@ describe("isToolAutoApproved", () => {
 		}
 
 		expect(isToolAutoApproved("firecrawl__scrape", settings)).toBe(false)
+	})
+
+	it("keeps coding tools and removes optional context-heavy tools for Hooshyar", () => {
+		const policies = buildToolPolicies(DEFAULT_AUTO_APPROVAL_SETTINGS, undefined, "hooshyar")
+
+		expect(policies.read_files?.enabled).not.toBe(false)
+		expect(policies.search_codebase?.enabled).not.toBe(false)
+		expect(policies.run_commands?.enabled).not.toBe(false)
+		expect(policies.editor?.enabled).not.toBe(false)
+		expect(policies.fetch_web_content).toEqual({ enabled: false })
+		expect(policies.web_search).toEqual({ enabled: false })
+		expect(policies.ask_question).toEqual({ enabled: false })
 	})
 })

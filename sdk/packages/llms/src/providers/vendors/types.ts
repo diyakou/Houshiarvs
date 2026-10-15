@@ -5,7 +5,7 @@ import type {
 	ModelTool,
 	ModelToolName,
 } from "@cline/shared";
-import type { CallSettings, ToolSet } from "ai";
+import type { CallSettings } from "ai";
 import type { RetryEmptyResponseOptions } from "../middleware/retry-empty-response";
 
 export type ProviderGeneratedMedia = Omit<GeneratedMedia, "id" | "sizeBytes">;
@@ -16,7 +16,8 @@ export interface ModelToolResultProjection {
 }
 
 export interface BuiltModelTool {
-	tool: ToolSet[string];
+	// biome-ignore lint/suspicious/noExplicitAny: provider tool types differ across @ai-sdk vendor package versions
+	tool: any;
 	/** Project a provider-native tool result into canonical assistant media. */
 	projectResult?: (output: unknown) => ModelToolResultProjection;
 }

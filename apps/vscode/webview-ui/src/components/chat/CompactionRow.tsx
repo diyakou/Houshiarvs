@@ -31,23 +31,23 @@ function parseCompactionInfo(text: string | undefined): ClineCompactionInfo | un
 /** Mirrors the CLI's formatCompactionDividerLabel wording for product consistency. */
 function formatCompactionLabel(info: ClineCompactionInfo): string {
 	if (info.status === "started") {
-		return info.mode === "manual" ? "Compacting context" : "Auto compacting context"
+		return info.mode === "manual" ? "در حال فشرده‌سازی کانتکس" : "در حال فشرده‌سازی خودکار کانتکس"
 	}
 	if (info.status === "failed") {
-		return "Compaction failed"
+		return "خطا در فشرده‌سازی کانتکس"
 	}
 	if (info.status === "cancelled") {
-		return "Compaction cancelled"
+		return "فشرده‌سازی کانتکس لغو شد"
 	}
 	if (info.status === "skipped") {
-		return "Compaction skipped"
+		return "کانتکس بهینه است (عدم نیاز به فشرده‌سازی)"
 	}
-	const parts: string[] = [info.mode === "manual" ? "Context compacted (manual)" : "Context compacted"]
+	const parts: string[] = [info.mode === "manual" ? "کانتکس بهینه‌سازی شد" : "فشرده‌سازی خودکار کانتکس"]
 	if (typeof info.tokensBefore === "number" && typeof info.tokensAfter === "number") {
-		parts.push(`${formatTokenCount(info.tokensBefore)} → ${formatTokenCount(info.tokensAfter)} tokens`)
+		parts.push(`${formatTokenCount(info.tokensBefore)} ← ${formatTokenCount(info.tokensAfter)} توکن`)
 	}
 	if (typeof info.messagesBefore === "number" && typeof info.messagesAfter === "number") {
-		parts.push(`${info.messagesBefore} → ${info.messagesAfter} messages`)
+		parts.push(`${info.messagesBefore} ← ${info.messagesAfter} پیام`)
 	}
 	return parts.join(" · ")
 }

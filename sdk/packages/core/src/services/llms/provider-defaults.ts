@@ -647,6 +647,63 @@ async function fetchLiteLlmPrivateModels(
 	);
 }
 
+async function fetchHooshyarPrivateModels(
+	config: ProviderConfig,
+	token: string,
+): Promise<Record<string, ModelInfo>> {
+	const baseUrl =
+		normalizeBaseUrl(config.baseUrl) || "https://wqai.morvism.ir/v1";
+	const endpoint = `${baseUrl.replace(/\/+$/, "")}/models`;
+	const response = await fetchWithTimeout(endpoint, {
+		method: "GET",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"x-api-key": token,
+			"User-Agent": "claude-code/hooshyar",
+			accept: "application/json",
+		},
+	});
+	if (!response.ok) {
+		throw new Error(`Hooshyar model refresh failed: HTTP ${response.status}`);
+	}
+
+	const payload = (await response.json()) as any;
+	let rawModels: any[] = [];
+	if (Array.isArray(payload)) {
+		rawModels = payload;
+	} else if (Array.isArray(payload?.data)) {
+		rawModels = payload.data;
+	} else if (Array.isArray(payload?.models)) {
+		rawModels = payload.models;
+	}
+	const models: Record<string, ModelInfo> = {};
+	for (const model of rawModels) {
+		const id = (typeof model === "string" ? model : model?.id || model?.name)?.trim();
+		if (!id) {
+			continue;
+		}
+		models[id] = buildModelFromPrivateSource(id, {
+			name: typeof model === "object" && model?.name ? model.name : id,
+			contextWindow: typeof model === "object" && typeof model?.context_length === "number" ? model.context_length : 200_000,
+			maxInputTokens: typeof model === "object" && typeof model?.max_input_tokens === "number" ? model.max_input_tokens : 200_000,
+			maxTokens: typeof model === "object" && typeof model?.max_tokens === "number" ? model.max_tokens : 8192,
+			supportsImages: true,
+			supportsPromptCache: true,
+			supportsReasoning: true,
+		});
+	}
+	if (Object.keys(models).length === 0) {
+		models["claude-sonnet-5"] = buildModelFromPrivateSource("claude-sonnet-5", {
+			name: "Claude Sonnet 5",
+			contextWindow: 200_000,
+			supportsImages: true,
+			supportsPromptCache: true,
+			supportsReasoning: true,
+		});
+	}
+	return models;
+}
+
 type PrivateProviderModelFetcher = (
 	config: ProviderConfig,
 	token: string,
@@ -658,6 +715,7 @@ const PRIVATE_PROVIDER_MODEL_FETCHERS: Record<
 > = {
 	baseten: fetchBasetenPrivateModels,
 	hicap: fetchHicapPrivateModels,
+	hooshyar: fetchHooshyarPrivateModels,
 	litellm: fetchLiteLlmPrivateModels,
 	poolside: fetchPoolsidePrivateModels,
 };

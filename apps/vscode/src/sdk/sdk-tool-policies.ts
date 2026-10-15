@@ -13,6 +13,7 @@ import type { McpHub } from "@/services/mcp/McpHub"
 export function buildToolPolicies(
 	_settings: AutoApprovalSettings,
 	mcpHub?: McpHub,
+	providerId?: string,
 ): Record<string, { enabled?: boolean; autoApprove?: boolean }> {
 	const policies: Record<string, { enabled?: boolean; autoApprove?: boolean }> = {}
 
@@ -26,6 +27,16 @@ export function buildToolPolicies(
 	set(["editor", "replace_in_file", "write_to_file", "apply_patch", "delete_file"])
 	set(["run_commands", "execute_command"])
 	set(["fetch_web_content", "web_fetch", "web_search"])
+
+	// Keep Hooshyar's fixed request context focused on coding. File discovery,
+	// search, commands, and editing remain available; optional web/question
+	// schemas are omitted from every model request to reduce baseline tokens.
+	if (providerId === "hooshyar") {
+		policies.fetch_web_content = { enabled: false }
+		policies.web_fetch = { enabled: false }
+		policies.web_search = { enabled: false }
+		policies.ask_question = { enabled: false }
+	}
 
 	if (mcpHub) {
 		for (const server of mcpHub.getServers()) {

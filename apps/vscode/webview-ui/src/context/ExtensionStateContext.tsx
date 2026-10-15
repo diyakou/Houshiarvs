@@ -304,7 +304,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		isNewUser: false,
 		welcomeViewCompleted: false,
 		onboardingModels: undefined,
-		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
+		mcpResponsesCollapsed: true, // Default value (collapsed) to prevent chat clutter
 		useAutoCondense: true,
 		compactionStrategy: "basic",
 		webSearchEnabled: false,

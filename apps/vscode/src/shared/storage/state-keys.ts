@@ -12,7 +12,6 @@ import { ClineRulesToggles } from "@shared/cline-rules"
 import { DEFAULT_FOCUS_CHAIN_SETTINGS, FocusChainSettings } from "@shared/FocusChainSettings"
 import { HistoryItem } from "@shared/HistoryItem"
 import { DEFAULT_MCP_DISPLAY_MODE, McpDisplayMode } from "@shared/McpDisplayMode"
-import { toLegacyApiProvider } from "@shared/model-catalog/provider-helpers"
 import { GlobalInstructionsFile } from "@shared/remote-config/schema"
 import { Mode } from "@shared/storage/types"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
@@ -72,7 +71,7 @@ const GLOBAL_STATE_FIELDS = {
 	userInfo: { default: undefined as UserInfo | undefined },
 	favoritedModelIds: { default: [] as string[] },
 	mcpMarketplaceEnabled: { default: true as boolean },
-	mcpResponsesCollapsed: { default: false as boolean },
+	mcpResponsesCollapsed: { default: true as boolean },
 	terminalReuseEnabled: { default: true as boolean },
 	vscodeTerminalExecutionMode: {
 		// Defaults only apply when no value is stored, so users who previously
@@ -244,11 +243,11 @@ const API_HANDLER_SETTINGS_FIELDS = {
 	// by older builds or other hosts is loaded from disk.
 	planModeApiProvider: {
 		default: DEFAULT_API_PROVIDER as ApiProvider,
-		transform: (v: any) => (typeof v === "string" ? toLegacyApiProvider(v) : v),
+		transform: () => DEFAULT_API_PROVIDER as ApiProvider,
 	},
 	actModeApiProvider: {
 		default: DEFAULT_API_PROVIDER as ApiProvider,
-		transform: (v: any) => (typeof v === "string" ? toLegacyApiProvider(v) : v),
+		transform: () => DEFAULT_API_PROVIDER as ApiProvider,
 	},
 
 	// Deprecated model settings

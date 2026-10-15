@@ -19,8 +19,12 @@ export async function refreshOpenAiModels(controller: Controller, request: OpenA
 		// Trailing slashes would produce "<baseUrl>//models", which many
 		// servers reject even though chat completions still work (the AI SDK
 		// normalizes the base URL for those).
-		const baseUrl = providerConfig.baseUrl?.trim().replace(/\/+$/, "")
-		const apiKey = providerConfig.apiKey
+		const baseUrl = (
+			request.baseUrl?.trim() ||
+			providerConfig.baseUrl?.trim() ||
+			(request.providerId === "hooshyar" ? "https://wqai.morvism.ir/v1" : "")
+		).replace(/\/+$/, "")
+		const apiKey = request.apiKey || providerConfig.apiKey
 
 		if (!baseUrl) {
 			return StringArray.create({ values: [] })
@@ -32,13 +36,24 @@ export async function refreshOpenAiModels(controller: Controller, request: OpenA
 
 		const config: AxiosRequestConfig = {
 			headers: {
+				"User-Agent": "claude-code/hooshyar",
 				...(providerConfig.headers ?? {}),
-				...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+				...(apiKey ? { Authorization: `Bearer ${apiKey}`, "x-api-key": apiKey } : {}),
 			},
 		}
 
 		const response = await axios.get(`${baseUrl}/models`, { ...config, ...getAxiosSettings() })
-		const modelsArray = response.data?.data?.map((model: any) => model.id) || []
+		let rawModels: any[] = []
+		if (Array.isArray(response.data)) {
+			rawModels = response.data
+		} else if (Array.isArray(response.data?.data)) {
+			rawModels = response.data.data
+		} else if (Array.isArray(response.data?.models)) {
+			rawModels = response.data.models
+		}
+		const modelsArray = rawModels
+			.map((model: any) => (typeof model === "string" ? model : model?.id || model?.name))
+			.filter(Boolean)
 		const models = [...new Set<string>(modelsArray)]
 
 		return StringArray.create({ values: models })

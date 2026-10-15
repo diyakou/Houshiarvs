@@ -36,3 +36,39 @@ describe("readGlobalStateFromStorage terminal execution mode", () => {
 		expect(await readTerminalExecutionMode(storedValue)).toBe(storedValue)
 	})
 })
+
+describe("readGlobalStateFromStorage API provider defaults", () => {
+	const temporaryDirectories: string[] = []
+
+	afterEach(() => {
+		for (const temporaryDirectory of temporaryDirectories.splice(0)) {
+			fs.rmSync(temporaryDirectory, { force: true, recursive: true })
+		}
+	})
+
+	it("uses Hooshyar for new installations", async () => {
+		const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "hooshyar-provider-default-"))
+		temporaryDirectories.push(temporaryDirectory)
+		const storage = new ClineFileStorage(path.join(temporaryDirectory, "globalState.json"))
+
+		const { readGlobalStateFromStorage } = await import("./state-helpers")
+		const state = await readGlobalStateFromStorage(storage)
+
+		expect(state.planModeApiProvider).toBe("hooshyar")
+		expect(state.actModeApiProvider).toBe("hooshyar")
+	})
+
+	it("migrates legacy provider selections to Hooshyar", async () => {
+		const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "hooshyar-provider-migration-"))
+		temporaryDirectories.push(temporaryDirectory)
+		const storage = new ClineFileStorage(path.join(temporaryDirectory, "globalState.json"))
+		await storage.update("planModeApiProvider", "anthropic")
+		await storage.update("actModeApiProvider", "openrouter")
+
+		const { readGlobalStateFromStorage } = await import("./state-helpers")
+		const state = await readGlobalStateFromStorage(storage)
+
+		expect(state.planModeApiProvider).toBe("hooshyar")
+		expect(state.actModeApiProvider).toBe("hooshyar")
+	})
+})

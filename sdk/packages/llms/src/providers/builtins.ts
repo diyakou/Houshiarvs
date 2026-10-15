@@ -796,6 +796,27 @@ const OPENAI_COMPATIBLE_SPEC_OVERRIDES: BuiltinSpecOverride[] = [
 		apiKeyEnv: ["OPENAI_API_KEY"],
 		defaults: { baseUrl: "https://api.openai.com/v1" },
 	},
+	{
+		id: "hooshyar",
+		name: "Hooshyar",
+		description: "Hooshyar AI coding models",
+		family: "anthropic",
+		// Hooshyar exposes the Anthropic Messages API. Keep these explicit so
+		// generated provider metadata can never make this provider fall back to
+		// OpenAI Chat Completions.
+		protocol: "anthropic",
+		client: "anthropic",
+		popular: 1,
+		capabilities: ["tools", "prompt-cache", "reasoning"],
+		defaultModelId: "claude-sonnet-5",
+		apiKeyEnv: ["HOOSHYAR_API_KEY"],
+		modelsProviderId: "hooshyar",
+		defaults: {
+			baseUrl: "https://wqai.morvism.ir/v1",
+			headers: { "User-Agent": "claude-code/hooshyar" },
+		},
+		metadata: ANTHROPIC_ROUTING_METADATA,
+	},
 	cline,
 	clinePass,
 	{

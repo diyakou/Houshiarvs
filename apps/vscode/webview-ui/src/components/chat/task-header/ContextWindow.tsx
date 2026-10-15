@@ -156,6 +156,7 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 						<HoverCard>
 							<HoverCardContent className="bg-menu rounded-xs shadow-sm">
 								<ContextWindowSummary
+									autoCompactThreshold={useAutoCondense ? 0.4 : 0}
 									cacheReads={cacheReads}
 									cacheWrites={cacheWrites}
 									contextWindow={tokenData.max}
@@ -177,6 +178,13 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 										color="success"
 										value={tokenData.percentage}
 									/>
+									{useAutoCondense && (
+										<div
+											className="absolute top-0 bottom-0 w-0.5 bg-emerald-400/70 z-10 pointer-events-none"
+											style={{ left: "40%" }}
+											title="آستانه فشرده‌سازی خودکار هوشمند (40%)"
+										/>
+									)}
 									{isOpened}
 								</div>
 							</HoverCardTrigger>

@@ -261,6 +261,33 @@ describe("cline-pass builtin spec", () => {
 });
 
 describe("built-in provider metadata", () => {
+	it("registers Hooshyar as an Anthropic Messages API provider", async () => {
+		const provider = await getProvider("hooshyar");
+		const models = await getModelsForProvider("hooshyar");
+		const spec = BUILTIN_SPECS.find((candidate) => candidate.id === "hooshyar");
+
+		expect(provider).toMatchObject({
+			id: "hooshyar",
+			name: "Hooshyar",
+			baseUrl: "https://wqai.morvism.ir/v1",
+			defaultModelId: "claude-sonnet-5",
+			client: "anthropic",
+			protocol: "anthropic",
+			capabilities: expect.arrayContaining(["popular", "tools"]),
+		});
+		expect(models["claude-sonnet-5"]).toMatchObject({
+			id: "claude-sonnet-5",
+		});
+		expect(BUILTIN_PROVIDER_MANIFESTS_BY_ID.hooshyar).toMatchObject({
+			id: "hooshyar",
+			api: "https://wqai.morvism.ir/v1",
+			apiKeyEnv: ["HOOSHYAR_API_KEY"],
+		});
+		expect(spec?.defaults?.headers).toEqual({
+			"User-Agent": "claude-code/hooshyar",
+		});
+	});
+
 	it("declares OpenRouter image transport for Cline-compatible gateways", async () => {
 		await expect(getProvider("cline")).resolves.toMatchObject({
 			metadata: {

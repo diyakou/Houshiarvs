@@ -1,4 +1,4 @@
-import { HistoryIcon, PlusIcon, PuzzleIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { HistoryIcon, PlusIcon, PuzzleIcon, ServerIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 export const Navbar = ({ startNewTask }: NavbarProps) => {
-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat } =
+	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat, navigateToMcp } =
 		useExtensionState()
 
 	const SETTINGS_TABS = useMemo(
@@ -28,6 +28,13 @@ export const Navbar = ({ startNewTask }: NavbarProps) => {
 						console.error("Failed to clear task:", error)
 					}
 				},
+			},
+			{
+				id: "mcp",
+				name: "MCP",
+				tooltip: "MCP Servers (اتصال ابزارها)",
+				icon: ServerIcon,
+				navigate: () => navigateToMcp(),
 			},
 			{
 				id: "customize",
@@ -58,7 +65,15 @@ export const Navbar = ({ startNewTask }: NavbarProps) => {
 				navigate: navigateToSettings,
 			},
 		],
-		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMarketplace, navigateToSettings, startNewTask],
+		[
+			navigateToAccount,
+			navigateToChat,
+			navigateToHistory,
+			navigateToMarketplace,
+			navigateToMcp,
+			navigateToSettings,
+			startNewTask,
+		],
 	)
 
 	return (

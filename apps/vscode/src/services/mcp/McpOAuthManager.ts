@@ -26,10 +26,12 @@ import {
 import { StateManager } from "@core/storage/StateManager"
 import { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js"
 import type { OAuthClientInformationMixed, OAuthClientMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js"
+import { ShowMessageType } from "@shared/proto/host/window"
 import crypto from "crypto"
+import { HostProvider } from "@/hosts/host-provider"
 import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
-import { openExternal } from "@/utils/env"
+import { openExternal, writeTextToClipboard } from "@/utils/env"
 import { getServerAuthHash } from "@/utils/mcpAuth"
 
 /**
@@ -106,12 +108,13 @@ class ClineOAuthClientProvider implements OAuthClientProvider {
 	}
 
 	get clientMetadata(): OAuthClientMetadata {
+		const isFigma = this.serverName.toLowerCase().includes("figma")
 		return {
 			redirect_uris: [this.redirectUrl],
 			token_endpoint_auth_method: "none",
 			grant_types: ["authorization_code", "refresh_token"],
 			response_types: ["code"],
-			client_name: "Cline",
+			client_name: isFigma ? "Claude Code" : "Cline",
 		}
 	}
 
@@ -248,12 +251,35 @@ export class McpOAuthManager {
 
 		const flow = (async () => {
 			const settingsPath = await this.getSettingsPath()
+			const isFigma = serverName.toLowerCase().includes("figma")
 			const result = await authorizeMcpServerOAuth({
 				serverName,
 				filePath: settingsPath,
-				clientName: "Cline",
+				clientName: isFigma ? "Claude Code" : "Cline",
 				fetch,
-				openUrl: (url) => openExternal(url),
+				openUrl: async (url) => {
+					Logger.log(`[McpOAuth] Opening browser for ${serverName}: ${url}`)
+					HostProvider.window
+						.showMessage({
+							type: ShowMessageType.INFORMATION,
+							message: `صفحه ورود به حساب ${serverName} در مرورگر باز شد. در صورت نیاز به باز کردن دستی یا کپی، از گزینه‌های زیر استفاده کنید:`,
+							options: { items: ["باز کردن مجدد در مرورگر", "کپی لینک ورود"] },
+						})
+						.then(async (choice) => {
+							if (choice?.selectedOption === "باز کردن مجدد در مرورگر") {
+								await openExternal(url)
+							} else if (choice?.selectedOption === "کپی لینک ورود") {
+								await writeTextToClipboard(url)
+								HostProvider.window.showMessage({
+									type: ShowMessageType.INFORMATION,
+									message: "لینک ورود با موفقیت در کلیپ‌بورد کپی شد.",
+								})
+							}
+						})
+						.catch(() => {})
+
+					await openExternal(url)
+				},
 				callbackPorts: MCP_OAUTH_CALLBACK_PORTS,
 				timeoutMs: MCP_OAUTH_FLOW_TIMEOUT_MS,
 			})

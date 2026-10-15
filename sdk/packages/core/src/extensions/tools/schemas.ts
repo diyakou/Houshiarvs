@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 
-export const INPUT_ARG_CHAR_LIMIT = 6000;
+export const INPUT_ARG_CHAR_LIMIT = 500_000;
 
 /**
  * Schema for read tool input
@@ -127,7 +127,7 @@ export const SearchCodebaseUnionInputSchema = z.union([
 const CommandInputSchema = z
 	.string()
 	.describe(
-		`The non-interactive shell command to execute - MUST keep input short and concise (within ${INPUT_ARG_CHAR_LIMIT * 2} characters) to avoid timeouts.`,
+		"The non-interactive shell command to execute - keep input short and concise to avoid timeouts.",
 	);
 
 export const StructuredCommandInputSchema = z.object({
@@ -202,12 +202,12 @@ export const EditFileInputSchema = z
 			.nullable()
 			.optional()
 			.describe(
-				`Exact text to replace (must match exactly once). Omit this when creating a missing file or inserting via insert_line. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; larger payloads should be split across multiple tool calls to avoid timeouts.`,
+				"Exact text to replace (must match exactly once). Omit this when creating a missing file or inserting via insert_line.",
 			),
 		new_text: z
 			.string()
 			.describe(
-				`The new content to write when creating a missing file, the replacement text for edits, or the inserted text when insert_line is provided. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; for large edits, use multiple calls with small chunks of old_text and new_text to iteratively edit the file.`,
+				"The new content to write when creating a missing file, the replacement text for edits, or the inserted text when insert_line is provided.",
 			),
 		// See start_line above: coerced so a stringified line number still applies.
 		insert_line: z.coerce
@@ -220,7 +220,7 @@ export const EditFileInputSchema = z
 			),
 	})
 	.describe(
-		"Edit a text file by replacing old_text with new_text, create the file with new_text if it does not exist, or insert new_text at insert_line when insert_line is provided. Prefer using this tool for file edits over shell commands. IMPORTANT: large edits can time out, so use small chunks and multiple calls when possible.",
+		"Edit a text file by replacing old_text with new_text, create the file with new_text if it does not exist, or insert new_text at insert_line when insert_line is provided. Prefer using this tool for file edits over shell commands.",
 	);
 
 /**

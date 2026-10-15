@@ -350,6 +350,7 @@ function resolveCommittedRuntimeModel(
  */
 const PROVIDER_API_KEY_MAP: Record<string, keyof ApiConfiguration> = {
 	anthropic: "apiKey",
+	hooshyar: "apiKey",
 	openrouter: "openRouterApiKey",
 	openai: "openAiApiKey",
 	"openai-native": "openAiNativeApiKey",
@@ -397,6 +398,7 @@ const PROVIDER_API_KEY_MAP: Record<string, keyof ApiConfiguration> = {
  */
 const PROVIDER_MODEL_ID_MAP: Record<string, { plan: keyof ApiConfiguration; act: keyof ApiConfiguration }> = {
 	anthropic: { plan: "planModeApiModelId", act: "actModeApiModelId" },
+	hooshyar: { plan: "planModeApiModelId", act: "actModeApiModelId" },
 	openrouter: { plan: "planModeOpenRouterModelId", act: "actModeOpenRouterModelId" },
 	openai: { plan: "planModeOpenAiModelId", act: "actModeOpenAiModelId" },
 	"openai-native": { plan: "planModeApiModelId", act: "actModeApiModelId" },
@@ -428,7 +430,20 @@ const PROVIDER_MODEL_ID_MAP: Record<string, { plan: keyof ApiConfiguration; act:
 // Provider/model defaults
 // ---------------------------------------------------------------------------
 
-const DEFAULT_PROVIDER_ID = "cline"
+const DEFAULT_PROVIDER_ID = "hooshyar"
+
+function buildHooshyarSystemPrompt(options: { cwd: string; mode: "act" | "plan"; preferredLanguage?: string }): string {
+	const modeInstructions =
+		options.mode === "plan"
+			? "You are in Plan mode. Inspect the project with read/search/command tools, but do not edit files or run state-changing commands. Present a concise plan and ask the user to toggle to Act mode before implementation."
+			: "You are in Act mode. Inspect relevant files before editing, use the provided file tools instead of guessing paths or contents, make focused edits, and verify the result."
+	const language = options.preferredLanguage ? `\nReply in ${options.preferredLanguage}.` : ""
+
+	return `You are Hooshyar, an AI coding agent working in VS Code.
+Working directory: ${options.cwd}
+${modeInstructions}
+Follow the project's existing conventions and instructions. Use absolute paths for file tools. Do not claim a file was read, changed, or tested unless the corresponding tool succeeded. For a simple non-coding question, answer directly without tools.${language}`
+}
 
 /**
  * Providers whose model list comes from a live local endpoint (Ollama's
@@ -747,6 +762,10 @@ export function resolveBaseUrl(providerId: string, config: ApiConfiguration): st
 		Logger.warn(`[SessionFactory] Failed to read ${providerId} base URL from providers.json`)
 	}
 
+	if (providerId === "hooshyar") {
+		return "https://wqai.morvism.ir/v1"
+	}
+
 	return undefined
 }
 
@@ -976,22 +995,36 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	}
 
 	let systemPrompt = ""
+	let preferredLanguage: string | undefined
 	try {
-		const workspaceName = resolveWorkspaceName(cwd)
-		systemPrompt = buildClineSystemPrompt({
-			ide: "VS Code",
-			workspaceRoot,
-			workspaceName,
-			metadata: workspaceMetadata,
-			mode: mode === "plan" ? "plan" : "act",
-			providerId,
-			platform: process.platform,
-			// The extension never exposes switch_to_act_mode (unlike the CLI):
-			// matching the legacy extension, the user must flip the Plan/Act
-			// toggle themselves, so the plan contract must not tell the model to
-			// call a tool it does not have.
-			planModeSwitchTool: false,
-		})
+		const preferredLanguageRaw = StateManager.get().getGlobalSettingsKey("preferredLanguage")
+		const resolvedLanguage = getLanguageKey(preferredLanguageRaw as LanguageDisplay | undefined)
+		if (resolvedLanguage && resolvedLanguage !== DEFAULT_LANGUAGE_SETTINGS) {
+			preferredLanguage = resolvedLanguage
+		}
+	} catch (error) {
+		Logger.warn("[SessionFactory] Failed to resolve preferredLanguage:", error)
+	}
+	try {
+		if (providerId === "hooshyar") {
+			systemPrompt = buildHooshyarSystemPrompt({
+				cwd: workspaceRoot,
+				mode: mode === "plan" ? "plan" : "act",
+				preferredLanguage,
+			})
+		} else {
+			const workspaceName = resolveWorkspaceName(cwd)
+			systemPrompt = buildClineSystemPrompt({
+				ide: "VS Code",
+				workspaceRoot,
+				workspaceName,
+				metadata: workspaceMetadata,
+				mode: mode === "plan" ? "plan" : "act",
+				providerId,
+				platform: process.platform,
+				planModeSwitchTool: false,
+			})
+		}
 		Logger.log(`[SessionFactory] Built system prompt: ${systemPrompt.length} chars`)
 	} catch (error) {
 		Logger.warn("[SessionFactory] Failed to build system prompt, using minimal fallback:", error)
@@ -1001,9 +1034,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// Inject preferred language instructions when a non-default language is selected.
 	// Mirrors classic src/core/task/index.ts preferredLanguage handling.
 	try {
-		const preferredLanguageRaw = StateManager.get().getGlobalSettingsKey("preferredLanguage")
-		const preferredLanguage = getLanguageKey(preferredLanguageRaw as LanguageDisplay | undefined)
-		if (preferredLanguage && preferredLanguage !== DEFAULT_LANGUAGE_SETTINGS) {
+		if (preferredLanguage && providerId !== "hooshyar") {
 			systemPrompt = `${systemPrompt}\n\n# Preferred Language\n\nSpeak in ${preferredLanguage}.`
 		}
 	} catch (error) {

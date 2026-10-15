@@ -22,6 +22,7 @@ import { DifyProvider } from "./providers/DifyProvider"
 import { GenericProviderSettings } from "./providers/GenericProviderSettings"
 import { GroqProvider } from "./providers/GroqProvider"
 import { HicapProvider } from "./providers/HicapProvider"
+import { HooshyarProvider } from "./providers/HooshyarProvider"
 import { HuggingFaceProvider } from "./providers/HuggingFaceProvider"
 import { LiteLlmProvider } from "./providers/LiteLlmProvider"
 import { LMStudioProvider } from "./providers/LMStudioProvider"
@@ -94,7 +95,7 @@ const ApiOptions = ({
 	const { apiConfiguration, remoteConfigSettings } = useExtensionState()
 
 	const selectedProvider =
-		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || "anthropic"
+		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || "hooshyar"
 	const { providers: catalogProviderListings } = useProviderListings()
 	const catalogProviderListing = useMemo(
 		() => catalogProviderListings.find((provider) => provider.id === selectedProvider),
@@ -349,7 +350,13 @@ const ApiOptions = ({
 				</ProviderDropdownWrapper>
 			</DropdownContainer>
 
-			{!isPopup && <ClinePassHint currentMode={currentMode} selectedProvider={selectedProvider} />}
+			{!isPopup && selectedProvider !== "hooshyar" && (
+				<ClinePassHint currentMode={currentMode} selectedProvider={selectedProvider} />
+			)}
+
+			{apiConfiguration && selectedProvider === "hooshyar" && (
+				<HooshyarProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
+			)}
 
 			{apiConfiguration && selectedProvider === "hicap" && (
 				<HicapProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />

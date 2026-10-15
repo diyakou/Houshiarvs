@@ -18,10 +18,18 @@ export async function createAnthropicProviderModule(
 ): Promise<ProviderFactoryResult> {
 	const apiKey = await resolveApiKey(config);
 	const isMiniMax = context.provider.id === "minimax";
+	const headers: Record<string, string> = {
+		...(config.headers ?? {}),
+	};
+	if (context.provider.id === "hooshyar" && apiKey) {
+		headers["Authorization"] = `Bearer ${apiKey}`;
+		headers["x-api-key"] = apiKey;
+		headers["User-Agent"] = "claude-code/hooshyar";
+	}
 	const provider = createAnthropic({
 		apiKey,
 		baseURL: config.baseUrl,
-		headers: config.headers,
+		headers,
 		fetch: isMiniMax ? createMiniMaxThinkingFetch(config.fetch) : config.fetch,
 		name: context.provider.id,
 	});

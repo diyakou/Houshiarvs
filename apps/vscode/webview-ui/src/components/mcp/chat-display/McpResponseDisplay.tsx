@@ -230,6 +230,15 @@ const McpResponseDisplay: React.FC<McpResponseDisplayProps> = ({ responseText })
 							<ChevronRightIcon className="header-icon" size={16} />
 						)}
 						Response
+						{responseText && (
+							<span className="text-[11px] font-normal text-description opacity-70 ml-1.5 font-mono">
+								(
+								{responseText.length > 1024
+									? `${Math.round((responseText.length / 1024) * 10) / 10} KB`
+									: `${responseText.length} B`}
+								)
+							</span>
+						)}
 					</div>
 					<DropdownContainer
 						style={{ minWidth: isExpanded ? "auto" : "0", visibility: isExpanded ? "visible" : "hidden" }}>

@@ -58,6 +58,19 @@ const ServerRow = ({
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [isRestarting, setIsRestarting] = useState(false)
+	const [isAuthenticating, setIsAuthenticating] = useState(false)
+
+	const handleAuthenticate = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		setIsAuthenticating(true)
+		McpServiceClient.authenticateMcpServer(StringRequest.create({ value: server.name }))
+			.catch((err) => {
+				console.error("Failed to authenticate MCP server", err)
+			})
+			.finally(() => {
+				setIsAuthenticating(false)
+			})
+	}
 
 	// Check if user is managed by remote config and if this server is remote-managed.
 	// Remote MCP servers from enterprise config are always URL-based (SSE/HTTP).
@@ -221,7 +234,25 @@ const ServerRow = ({
 					/>
 				)}
 				<span className="flex-1 min-w-0 overflow-hidden break-words whitespace-normal">
-					<span className="block font-medium">{marketplaceMetadata?.name || server.name}</span>
+					<div className="flex items-center gap-2 flex-wrap">
+						<span className="font-medium">{marketplaceMetadata?.name || server.name}</span>
+						{server.oauthRequired && server.oauthAuthStatus === "authenticated" && (
+							<span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/15 text-green-500 border border-green-500/30">
+								✓ لاگین شده (Authenticated)
+							</span>
+						)}
+						{server.oauthAuthStatus === "pending" && (
+							<span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center gap-1">
+								<span className="codicon codicon-loading codicon-modifier-spin text-xs" />
+								در حال ورود به حساب...
+							</span>
+						)}
+						{server.oauthRequired && server.oauthAuthStatus === "unauthenticated" && (
+							<span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/15 text-red-500 border border-red-500/30">
+								نیاز به ورود (Auth Required)
+							</span>
+						)}
+					</div>
 					{marketplaceMetadata?.description && (
 						<span className="block mt-0.5 text-xs text-description">{marketplaceMetadata.description}</span>
 					)}
@@ -282,18 +313,44 @@ const ServerRow = ({
 				/>
 			</div>
 
+			{server.oauthAuthStatus === "pending" && (
+				<div className="text-sm bg-text-block-background p-3 rounded-b-sm border-t border-amber-500/30">
+					<div className="flex items-center gap-2 text-amber-500 font-medium mb-1">
+						<span className="codicon codicon-loading codicon-modifier-spin" />
+						در حال انتظار برای تایید ورود در مرورگر...
+					</div>
+					<div className="text-xs text-description mb-2.5">
+						صفحه ورود به حساب در مرورگر باز شده است. لطفا در سایت ورود خود را تایید کنید تا اتصال برقرار شود. در صورت
+						عدم باز شدن خودکار مرورگر، می‌توانید از دکمه زیر استفاده کنید:
+					</div>
+					<Button
+						className="max-w-[calc(100%-20px)]"
+						disabled={isAuthenticating}
+						onClick={handleAuthenticate}
+						size="sm"
+						variant="secondary">
+						{isAuthenticating ? "در حال باز کردن مجدد..." : "باز کردن مجدد لینک ورود در مرورگر"}
+					</Button>
+				</div>
+			)}
+
 			{server.error ? (
 				<div className="text-sm bg-text-block-background rounded-b-sm">
 					<div className="text-failed-icon mb-2 px-2.5 break-words">{server.error}</div>
 					{server.oauthRequired && server.oauthAuthStatus === "unauthenticated" ? (
 						<Button
 							className="m-2.5 mt-0 max-w-[calc(100%-20px)]"
-							onClick={(e) => {
-								e.stopPropagation()
-								McpServiceClient.authenticateMcpServer(StringRequest.create({ value: server.name }))
-							}}
+							disabled={isAuthenticating || server.status === "connecting"}
+							onClick={handleAuthenticate}
 							variant="default">
-							Authenticate
+							{isAuthenticating ? (
+								<span className="flex items-center gap-1.5">
+									<span className="codicon codicon-loading codicon-modifier-spin" />
+									در حال اتصال و باز کردن مرورگر...
+								</span>
+							) : (
+								"ورود به حساب و اتصال (Authenticate)"
+							)}
 						</Button>
 					) : (
 						<Button
@@ -409,6 +466,16 @@ const ServerRow = ({
 									? "Server Disabled"
 									: "Restart Server"}
 						</Button>
+
+						{server.oauthRequired && server.oauthAuthStatus === "authenticated" && (
+							<Button
+								className="w-[calc(100%-14px)] mt-1 mx-1.5 mb-3"
+								disabled={isAuthenticating || server.status === "connecting"}
+								onClick={handleAuthenticate}
+								variant="secondary">
+								{isAuthenticating ? "در حال باز کردن مرورگر..." : "ورود مجدد / تغییر حساب (Re-authenticate)"}
+							</Button>
+						)}
 
 						{!isRemoteManagedServer && (
 							<Button

@@ -126,14 +126,15 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 				<AccordionItem
 					isExpanded={expandedSections.has("threshold")}
 					onToggle={(event) => toggleSection("threshold", event)}
-					title="Auto Condense Threshold"
-					value={<span className="text-muted-foreground">{`${(autoCompactThreshold * 100).toFixed(0)}%`}</span>}>
-					<div className="space-y-1">
-						<p className="text-xs leading-relaxed text-white">
-							Click on the context window bar to set a new threshold.
-						</p>
-						<p className="text-xs leading-relaxed mt-0 mb-0">
-							When the context window usage exceeds this threshold, the task will be automatically condensed.
+					title="مدیریت خودکار کانتکس"
+					value={
+						<span className="text-emerald-400 font-mono text-xs">{`${(autoCompactThreshold * 100).toFixed(0)}% (فعال)`}</span>
+					}>
+					<div className="space-y-1.5 py-1 text-xs">
+						<p className="leading-relaxed text-foreground font-medium">فشرده‌سازی هوشمند کانتکس فعال است.</p>
+						<p className="leading-relaxed text-muted-foreground">
+							برای بهینه‌سازی مصرف توکن‌ها و جلوگیری از اتمام زودهنگام سهمیه در مکالمات طولانی، هشیار تاریخچه پیام‌ها و
+							خروجی‌های گذشته را به صورت خودکار فشرده و خلاصه می‌کند.
 						</p>
 					</div>
 				</AccordionItem>

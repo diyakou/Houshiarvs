@@ -1447,7 +1447,13 @@ describe("buildSessionConfig", () => {
 	})
 
 	it("emits the shared mode-tag instructions in both act and plan system prompts", async () => {
-		mocks.stateManager.getApiConfiguration.mockReturnValue({} as any)
+		mocks.stateManager.getApiConfiguration.mockReturnValue({
+			actModeApiProvider: "anthropic",
+			planModeApiProvider: "anthropic",
+			actModeApiModelId: "claude-sonnet-4-6",
+			planModeApiModelId: "claude-sonnet-4-6",
+			apiKey: "test-key",
+		} as any)
 
 		const actConfig = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
 		const planConfig = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "plan" })
@@ -1469,6 +1475,21 @@ describe("buildSessionConfig", () => {
 		// instead of a tool it does not have.
 		expect(planConfig.systemPrompt).not.toContain("switch_to_act_mode")
 		expect(planConfig.systemPrompt).toContain("Plan/Act toggle")
+	})
+
+	it("uses a compact coding prompt for Hooshyar without losing file-tool guidance", async () => {
+		mocks.stateManager.getApiConfiguration.mockReturnValue({
+			actModeApiProvider: "hooshyar",
+			actModeApiModelId: "claude-sonnet-5",
+			apiKey: "test-key",
+		} as any)
+
+		const config = await buildSessionConfig({ cwd: "/tmp/workspace", mode: "act" })
+
+		expect(config.systemPrompt).toContain("You are Hooshyar")
+		expect(config.systemPrompt).toContain("Inspect relevant files before editing")
+		expect(config.systemPrompt).toContain("Use absolute paths for file tools")
+		expect(config.systemPrompt.length).toBeLessThan(1_000)
 	})
 })
 

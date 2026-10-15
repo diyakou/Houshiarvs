@@ -61,6 +61,34 @@ describe("createAnthropicProviderModule", () => {
 			}),
 		);
 	});
+
+	it("sends Hooshyar requests through Anthropic with its required headers", async () => {
+		const customFetch = vi.fn<typeof fetch>();
+
+		await createAnthropicProviderModule(
+			config({
+				providerId: "hooshyar",
+				apiKey: "hooshyar-api-key",
+				baseUrl: "https://wqai.morvism.ir/v1",
+				fetch: customFetch,
+			}),
+			context("hooshyar"),
+		);
+
+		expect(createAnthropicMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				apiKey: "hooshyar-api-key",
+				baseURL: "https://wqai.morvism.ir/v1",
+				name: "hooshyar",
+				fetch: customFetch,
+				headers: expect.objectContaining({
+					Authorization: "Bearer hooshyar-api-key",
+					"x-api-key": "hooshyar-api-key",
+					"User-Agent": "claude-code/hooshyar",
+				}),
+			}),
+		);
+	});
 });
 
 function config(

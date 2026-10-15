@@ -23,7 +23,7 @@ export function useClinePassPromo() {
 	const isSelfHostedOrUnknown = !environment || environment === "selfHosted"
 	const remoteProviders: string[] = remoteConfigSettings?.remoteConfiguredProviders || []
 	const isBlockedByRemoteConfig = remoteProviders.length > 0 && !remoteProviders.includes(CLINE_PASS_PROVIDER_ID)
-	const isClinePassEnabled = !isSelfHostedOrUnknown && !isBlockedByRemoteConfig
+	const isClinePassEnabled = false
 
 	// Mirrors the switch action's scope: with separate plan/act models the
 	// promos only affect (and therefore only reflect) the current mode.

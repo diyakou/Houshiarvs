@@ -163,6 +163,7 @@ export interface CreateMcpOAuthProviderContextOptions {
 	redirectUrl: string;
 	onAuthorizationUrl?: (url: string) => void | Promise<void>;
 	clientInformation?: OAuthClientInformationMixed;
+	clientName?: string;
 }
 
 export interface McpOAuthProviderContext {
@@ -209,9 +210,9 @@ function toErrorMessage(error: unknown): string {
 	return String(error);
 }
 
-function createOAuthClientMetadata(redirectUrl: string): OAuthClientMetadata {
+function createOAuthClientMetadata(redirectUrl: string, clientName?: string): OAuthClientMetadata {
 	return {
-		client_name: "Cline",
+		client_name: clientName || "Claude Code",
 		redirect_uris: [redirectUrl],
 		grant_types: ["authorization_code", "refresh_token"],
 		response_types: ["code"],
@@ -308,8 +309,10 @@ export function createMcpOAuthProviderContext(
 			return state.redirectUrl ?? options.redirectUrl;
 		},
 		get clientMetadata() {
+			const isFigma = options.serverName.toLowerCase().includes("figma");
 			return createOAuthClientMetadata(
 				state.redirectUrl ?? options.redirectUrl,
+				options.clientName ?? (isFigma ? "Claude Code" : "Cline"),
 			);
 		},
 		state: () => {
@@ -672,6 +675,7 @@ export async function authorizeMcpServerOAuth(
 	const oauthContext = createMcpOAuthProviderContext({
 		settingsPath,
 		serverName,
+		clientName: options.clientName,
 		redirectUrl: callbackServer.callbackUrl,
 		clientInformation: createMcpOAuthClientInformation(
 			registration.oauthClient,

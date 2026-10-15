@@ -16,6 +16,7 @@ const CUSTOM_PROVIDER_SETTINGS_IDS = new Set([
 	"cline-pass",
 	"dify",
 	"hicap",
+	"hooshyar",
 	"litellm",
 	"lmstudio",
 	"moonshot",

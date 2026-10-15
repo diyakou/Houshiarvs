@@ -51,18 +51,27 @@ describe("provider model catalog handlers", () => {
 		vi.clearAllMocks()
 	})
 
-	it("listProviders returns provider listings from the catalog singleton", async () => {
+	it("listProviders exposes only Hooshyar", async () => {
 		const { listProviders } = await import("../listProviders")
-		const providerId = parseProviderId("deepseek")
+		const providerId = parseProviderId("hooshyar")
 		const store = makeStore({ providerId })
 		const catalog = makeCatalog()
 		vi.mocked(catalog.listProviders).mockResolvedValue([
 			{
-				id: providerId,
+				id: parseProviderId("deepseek"),
 				name: "DeepSeek",
 				defaultModelId: "deepseek-v4-flash",
 				protocol: "openai-chat",
 				authDescription: "DeepSeek models",
+				allowsCustomModelIds: false,
+				usageCostDisplay: "show",
+			},
+			{
+				id: providerId,
+				name: "Hooshyar",
+				defaultModelId: "claude-sonnet-5",
+				protocol: "openai-chat",
+				authDescription: "Hooshyar AI coding models",
 				allowsCustomModelIds: false,
 				usageCostDisplay: "show",
 			},
@@ -73,12 +82,12 @@ describe("provider model catalog handlers", () => {
 
 		expect(response.providers).toEqual([
 			{
-				id: "deepseek",
-				name: "DeepSeek",
-				defaultModelId: "deepseek-v4-flash",
+				id: "hooshyar",
+				name: "Hooshyar",
+				defaultModelId: "claude-sonnet-5",
 				family: undefined,
 				protocol: "openai-chat",
-				authDescription: "DeepSeek models",
+				authDescription: "Hooshyar AI coding models",
 				baseUrlDescription: undefined,
 				allowsCustomModelIds: false,
 				usageCostDisplay: "show",

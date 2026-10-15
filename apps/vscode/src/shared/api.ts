@@ -24,6 +24,7 @@ export type ApiProvider =
 	| "vscode-lm"
 	| "cline"
 	| "cline-pass"
+	| "hooshyar"
 	| "litellm"
 	| "moonshot"
 	| "nebius"
@@ -53,7 +54,7 @@ export type ApiProvider =
 	| "tencent-tokenhub"
 	| "chutes"
 
-export const DEFAULT_API_PROVIDER = "openrouter" as ApiProvider
+export const DEFAULT_API_PROVIDER = "hooshyar" as ApiProvider
 
 export interface ApiHandlerOptions extends Partial<ApiHandlerSettings> {
 	ulid?: string // Used to identify the task in API requests
